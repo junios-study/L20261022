@@ -13,5 +13,9 @@ UCLASS()
 class L20261022_API ALobbyPC : public APlayerController
 {
 	GENERATED_BODY()
-	
+public:
+	ALobbyPC();
+
+	virtual void BeginPlay() override;
+
 };

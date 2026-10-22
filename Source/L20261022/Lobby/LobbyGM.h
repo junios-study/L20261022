@@ -13,5 +13,10 @@ UCLASS()
 class L20261022_API ALobbyGM : public AGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+	ALobbyGM();
+
+	virtual void BeginPlay() override;
 	
 };
