@@ -35,4 +35,7 @@ public:
 
 	FTimerHandle LeftTimerHandle;
 
+
+	void OpenInGame();
+
 };

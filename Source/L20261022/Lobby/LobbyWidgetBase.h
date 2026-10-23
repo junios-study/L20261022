@@ -38,6 +38,9 @@ public:
 	virtual void NativeOnInitialized() override;
 
 	UFUNCTION()
+	void ProcessTextCommited(const FText& Text, ETextCommit::Type CommitMethod);
+
+	UFUNCTION()
 	void OnStart();
 
 	void ShowStartButton();
@@ -50,5 +53,8 @@ public:
 
 	UFUNCTION()
 	void UpdateConnectionCount(int NewCount);
+
+	UFUNCTION(BlueprintCallable)
+	void AddMessage(const FText& Message);
 
 };

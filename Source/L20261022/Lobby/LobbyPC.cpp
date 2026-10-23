@@ -48,6 +48,34 @@ void ALobbyPC::BeginPlay()
 			}
 		}
 	}
+
+	bShowMouseCursor = true;
+
+	SetInputMode(FInputModeGameAndUI());
 }
 
+bool ALobbyPC::C2S_SendMessage_Validate(const FText& Messsage)
+{
+	return true;
+}
+
+void ALobbyPC::C2S_SendMessage_Implementation(const FText& Messsage)
+{
+	for (auto Iter = GetWorld()->GetPlayerControllerIterator(); Iter; ++Iter)
+	{
+		ALobbyPC* PC = Cast<ALobbyPC>(*Iter);
+		if (PC)
+		{
+			PC->S2C_SendMessage(Messsage);
+		}
+	}
+}
+
+void ALobbyPC::S2C_SendMessage_Implementation(const FText& Messsage)
+{
+	if (LobbyWidgetObject)
+	{
+		LobbyWidgetObject->AddMessage(Messsage);
+	}
+}
 

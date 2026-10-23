@@ -8,6 +8,8 @@
 #include "Components/EditableTextBox.h"
 #include "LobbyGS.h"
 #include "Kismet/GameplayStatics.h"
+#include "LobbyPC.h"
+#include "LobbyGM.h"
 
 void ULobbyWidgetBase::NativeOnInitialized()
 {
@@ -20,11 +22,55 @@ void ULobbyWidgetBase::NativeOnInitialized()
 		GS->OnChangeConnectoinCount.AddDynamic(this, &ULobbyWidgetBase::UpdateConnectionCount);
 	}
 
+	if (ChatInput)
+	{
+		ChatInput->OnTextCommitted.AddDynamic(this, &ULobbyWidgetBase::ProcessTextCommited);
+	}
+
+	if (StartButton)
+	{
+		StartButton->OnClicked.AddDynamic(this, &ULobbyWidgetBase::OnStart);
+	}
+}
+
+void ULobbyWidgetBase::ProcessTextCommited(const FText& Text, ETextCommit::Type CommitMethod)
+{
+	switch (CommitMethod)
+	{
+		case ETextCommit::OnEnter:
+		{
+			ALobbyPC* PC = Cast<ALobbyPC>(GetOwningPlayer());
+			if (PC)
+			{
+				//Call Client, Execute Server
+				PC->C2S_SendMessage(Text);
+			}
+			///Text
+
+			if (ChatInput)
+			{
+				ChatInput->SetText(FText::FromString(TEXT("")));
+			}
+		}
+
+		case ETextCommit::OnCleared:
+		{
+			if (ChatInput)
+			{
+				ChatInput->SetUserFocus(GetOwningPlayer());
+			}
+		}
+
+	}
 }
 
 void ULobbyWidgetBase::OnStart()
 {
-
+	ALobbyGM* GM = Cast<ALobbyGM>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		GM->OpenInGame();
+	}
 }
 
 void ULobbyWidgetBase::ShowStartButton()
@@ -52,7 +98,21 @@ void ULobbyWidgetBase::UpdateConnectionCount(int NewCount)
 {
 	if (ConnectionCount)
 	{
-		const FString Time = FString::Printf(TEXT("%d명"), NewCount);
+		const FString Time = FString::Printf(TEXT("%d/100명"), NewCount);
 		ConnectionCount->SetText(FText::FromString(Time));
+	}
+}
+
+void ULobbyWidgetBase::AddMessage(const FText& Message)
+{
+	if (ChatScroll)
+	{
+		UTextBlock* NewTextBlock = NewObject<UTextBlock>(ChatScroll);
+		NewTextBlock->SetText(Message);
+		FSlateFontInfo FontInfo = NewTextBlock->GetFont(); 
+		FontInfo.Size = 18;
+		NewTextBlock->SetFont(FontInfo);
+		ChatScroll->AddChild(NewTextBlock);
+		ChatScroll->ScrollToEnd();
 	}
 }

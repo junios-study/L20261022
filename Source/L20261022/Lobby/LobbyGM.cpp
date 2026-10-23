@@ -36,6 +36,11 @@ void ALobbyGM::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 }
 
+void ALobbyGM::OpenInGame()
+{
+	GetWorld()->ServerTravel(TEXT("L_InGame"));
+}
+
 void ALobbyGM::BeginPlay()
 {
 	Super::BeginPlay();
