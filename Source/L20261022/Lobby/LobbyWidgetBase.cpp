@@ -17,6 +17,7 @@ void ULobbyWidgetBase::NativeOnInitialized()
 	if (GS)
 	{
 		GS->OnChangeLeftTime.AddDynamic(this, &ULobbyWidgetBase::UpdateLeftTime);
+		GS->OnChangeConnectoinCount.AddDynamic(this, &ULobbyWidgetBase::UpdateConnectionCount);
 	}
 
 }
@@ -44,5 +45,14 @@ void ULobbyWidgetBase::UpdateLeftTime(int NewLeftTime)
 	{
 		const FString Time = FString::Printf(TEXT("%d초 남음"), NewLeftTime);
 		LeftTime->SetText(FText::FromString(Time));
+	}
+}
+
+void ULobbyWidgetBase::UpdateConnectionCount(int NewCount)
+{
+	if (ConnectionCount)
+	{
+		const FString Time = FString::Printf(TEXT("%d명"), NewCount);
+		ConnectionCount->SetText(FText::FromString(Time));
 	}
 }

@@ -16,6 +16,9 @@ class L20261022_API ALobbyPC : public APlayerController
 public:
 	ALobbyPC();
 
+	virtual void PostInitializeComponents() override;
+
+
 	virtual void BeginPlay() override;
 
 

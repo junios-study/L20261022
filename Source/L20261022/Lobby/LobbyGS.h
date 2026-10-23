@@ -7,6 +7,9 @@
 #include "LobbyGS.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_OneParam(FChangeLeftTimeSignature, ALobbyGS, OnChangeLeftTime, int, NewTime);
+
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_OneParam(FChangeConnectionCountSignature, ALobbyGS, OnChangeConnectoinCount, int, NewCount);
+
 /**
  * 
  */
@@ -39,4 +42,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FChangeLeftTimeSignature OnChangeLeftTime;
+
+	UPROPERTY(BlueprintAssignable)
+	FChangeConnectionCountSignature OnChangeConnectoinCount;
 };

@@ -48,4 +48,7 @@ public:
 	UFUNCTION()
 	void UpdateLeftTime(int NewLeftTime);
 
+	UFUNCTION()
+	void UpdateConnectionCount(int NewCount);
+
 };

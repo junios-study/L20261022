@@ -4,9 +4,16 @@
 #include "LobbyPC.h"
 #include "LobbyWidgetBase.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "LobbyGS.h"
+#include "Kismet/GameplayStatics.h"
 
 ALobbyPC::ALobbyPC()
 {
+}
+
+void ALobbyPC::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
 }
 
 void ALobbyPC::BeginPlay()
@@ -21,7 +28,6 @@ void ALobbyPC::BeginPlay()
 
 	UKismetSystemLibrary::PrintString(GetWorld(), Message);
 
-
 	if (IsLocalController())
 	{
 		LobbyWidgetObject = CreateWidget<ULobbyWidgetBase>(this, LobbyWidgetClass);
@@ -32,6 +38,13 @@ void ALobbyPC::BeginPlay()
 			if (HasAuthority())
 			{
 				LobbyWidgetObject->ShowStartButton();
+				//예외 상황으로 로그인 정보는 위젯보다 먼저 처리됨.
+				ALobbyGS* GS = Cast<ALobbyGS>(UGameplayStatics::GetGameState(GetWorld()));
+				if (GS)
+				{
+					GS->OnRep_ConnectionCount();
+					GS->OnRep_LeftTime();
+				}
 			}
 		}
 	}

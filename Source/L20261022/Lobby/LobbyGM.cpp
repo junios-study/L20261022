@@ -24,10 +24,12 @@ void ALobbyGM::Logout(AController* Exiting)
 {
 	//To do
 
+	UE_LOG(LogTemp, Warning, TEXT("Logout"));
+
 	ALobbyGS* GS = GetGameState<ALobbyGS>();
 	if (GS)
 	{
-		GS->SetConnectionCount(GS->ConnectionCount - 1);
+		GS->SetConnectionCount(GetNumPlayers() - 1);
 		GS->OnRep_ConnectionCount();
 	}
 
@@ -88,7 +90,14 @@ void ALobbyGM::PostLogin(APlayerController* NewPlayer)
 	ALobbyGS* GS = GetGameState<ALobbyGS>();
 	if (GS)
 	{
-		GS->SetConnectionCount(GS->ConnectionCount + 1);
+		int Count = 0;
+		for (auto Iter = GetWorld()->GetPlayerControllerIterator(); Iter; ++Iter)
+		{
+			Count++;
+		}
+
+		GS->SetConnectionCount(Count);
+		GS->OnRep_ConnectionCount();
 	}
 }
 

@@ -12,6 +12,7 @@ void ALobbyGS::OnRep_LeftTime()
 
 void ALobbyGS::OnRep_ConnectionCount()
 {
+	OnChangeConnectoinCount.Broadcast(ConnectionCount);
 }
 
 void ALobbyGS::SpendTime()
