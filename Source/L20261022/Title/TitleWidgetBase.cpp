@@ -48,7 +48,7 @@ void UTitleWidgetBase::ProcessLoginClick()
 
 void UTitleWidgetBase::ProcessConnectClick()
 {
-	UGameplayStatics::OpenLevel(GetWorld(), *ServerIP->GetText().ToString());
+	UGameplayStatics::OpenLevel(GetWorld(), *ServerIP->GetText().ToString(), true, TEXT("Options=2fa45UA"));
 }
 
 void UTitleWidgetBase::ProcessStartServerClick()

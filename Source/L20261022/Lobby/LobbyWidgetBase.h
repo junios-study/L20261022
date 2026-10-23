@@ -45,4 +45,7 @@ public:
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> StartButtonAnimation;
 
+	UFUNCTION()
+	void UpdateLeftTime(int NewLeftTime);
+
 };
