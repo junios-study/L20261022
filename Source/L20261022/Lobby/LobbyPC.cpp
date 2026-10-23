@@ -5,13 +5,9 @@
 
 ALobbyPC::ALobbyPC()
 {
-	UE_LOG(LogTemp, Warning, TEXT("ALobbyPC() %d"), GetNetMode());
-
 }
 
 void ALobbyPC::BeginPlay()
 {
 	Super::BeginPlay();
-
-	UE_LOG(LogTemp, Warning, TEXT("ALobbyPC::BeginPlay() %d"), GetNetMode());
 }
