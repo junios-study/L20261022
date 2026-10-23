@@ -3,3 +3,11 @@
 
 #include "LobbyWidgetBase.h"
 
+void ULobbyWidgetBase::NativeOnInitialized()
+{
+}
+
+void ULobbyWidgetBase::OnStart()
+{
+
+}

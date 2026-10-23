@@ -11,3 +11,5 @@ void ALobbyPC::BeginPlay()
 {
 	Super::BeginPlay();
 }
+
+

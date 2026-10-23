@@ -6,6 +6,10 @@
 #include "Blueprint/UserWidget.h"
 #include "LobbyWidgetBase.generated.h"
 
+class UButton;
+class UTextBlock;
+class UEditableTextBox;
+class UScrollBox;
 /**
  * 
  */
@@ -14,4 +18,28 @@ class L20261022_API ULobbyWidgetBase : public UUserWidget
 {
 	GENERATED_BODY()
 	
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UButton> StartButton;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UTextBlock> LeftTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UTextBlock> ConnectionCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UScrollBox> ChatScroll;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UEditableTextBox> ChatInput;
+
+	virtual void NativeOnInitialized() override;
+
+	UFUNCTION()
+	void OnStart();
+
+
+
 };
