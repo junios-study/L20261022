@@ -17,11 +17,18 @@ class L20261022_API ALobbyGS : public AGameStateBase
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data", Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data", ReplicatedUsing = "OnRep_LeftTime")
 	int64 LeftTime = 60;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data", Replicated)
+	UFUNCTION()
+	void OnRep_LeftTime();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data", ReplicatedUsing = "OnRep_ConnectionCount")
 	int64 ConnectionCount = 0;
+
+	UFUNCTION()
+	void OnRep_ConnectionCount();
+
 
 	void SpendTime();
 

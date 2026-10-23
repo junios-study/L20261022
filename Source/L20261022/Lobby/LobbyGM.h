@@ -30,6 +30,9 @@ public:
 	void SpendTime();
 
 
+	virtual void Logout(AController* Exiting) override;
+
+
 	FTimerHandle LeftTimerHandle;
 
 };

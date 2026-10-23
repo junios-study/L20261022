@@ -16,7 +16,22 @@ void ALobbyGM::SpendTime()
 	if (GS)
 	{
 		GS->SpendTime();
+		GS->OnRep_LeftTime(); //BP는 알아서 호출, CPP에서는 안됨
 	}
+}
+
+void ALobbyGM::Logout(AController* Exiting)
+{
+	//To do
+
+	ALobbyGS* GS = GetGameState<ALobbyGS>();
+	if (GS)
+	{
+		GS->SetConnectionCount(GS->ConnectionCount - 1);
+		GS->OnRep_ConnectionCount();
+	}
+
+	Super::Logout(Exiting);
 }
 
 void ALobbyGM::BeginPlay()
@@ -69,6 +84,12 @@ APlayerController* ALobbyGM::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, co
 void ALobbyGM::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
+
+	ALobbyGS* GS = GetGameState<ALobbyGS>();
+	if (GS)
+	{
+		GS->SetConnectionCount(GS->ConnectionCount + 1);
+	}
 }
 
 void ALobbyGM::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
