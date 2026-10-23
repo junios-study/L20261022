@@ -40,6 +40,9 @@ public:
 	UFUNCTION()
 	void OnStart();
 
+	void ShowStartButton();
 
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> StartButtonAnimation;
 
 };

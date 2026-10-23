@@ -18,4 +18,12 @@ public:
 
 	virtual void BeginPlay() override;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class ULobbyWidgetBase> LobbyWidgetClass;
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<class ULobbyWidgetBase> LobbyWidgetObject;
+
 };
