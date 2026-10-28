@@ -8,6 +8,7 @@ void UAnimNotify_ClassCheckAttack::Notify(USkeletalMeshComponent* MeshComp, UAni
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
+	UE_LOG(LogTemp, Warning, TEXT("UAnimNotify_ClassCheckAttack::Notify"));
 
 	ABasePlayer* Player = Cast<ABasePlayer>(MeshComp->GetOwner());
 	if (Player)
