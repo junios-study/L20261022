@@ -13,6 +13,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ABasePlayer::ABasePlayer()
@@ -33,6 +34,8 @@ ABasePlayer::ABasePlayer()
 
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 
+	bReplicates = true;
+
 }
 
 // Called when the game starts or when spawned
@@ -48,28 +51,17 @@ void ABasePlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//animation Blueprint
-	//static bool bIdle = false;
-	//static bool bJog = false;
-
-	//if (GetCharacterMovement()->Velocity.SizeSquared() == 0)
-	//{
-	//	if (!bIdle)
-	//	{
-	//		GetMesh()->PlayAnimation(IdleAnimation, true);
-	//		bIdle = true;
-	//		bJog = false;
-	//	}
-	//}
-	//else
-	//{
-	//	if (!bJog)
-	//	{
-	//		GetMesh()->PlayAnimation(JogAnimation, true);
-	//		bJog = true;
-	//		bIdle = false;
-	//	}
-	//}
+	
+	if (!CurrentWeapon &&
+		ElapsedFireTime >= FireRate && bFire && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
+	{
+		Shoot();
+		ElapsedFireTime = 0;
+	}
+	else
+	{
+		ElapsedFireTime = +DeltaTime;
+	}
 }
 
 // Called to bind functionality to input
@@ -104,17 +96,136 @@ void ABasePlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void ABasePlayer::Jog(const FInputActionValue& Value)
 {
-	bool IsJog = Value.Get<bool>();
 
-	if (IsJog)
+	if (Value.Get<bool>() != bIsLog)
 	{
+		bIsLog = Value.Get<bool>();
+
+		//내꺼 속력 설정
+		C2S_Jog_Implementation(bIsLog);
+
+		//서버에서 속력 설정
+		C2S_Jog(bIsLog);
+	}
+}
+
+void ABasePlayer::C2S_Jog_Implementation(bool Value)
+{
+	bIsLog = Value;
+
+	if (bIsLog)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("C2S_Jog_Implementation %f"), JogSpeed);
+
 		GetCharacterMovement()->MaxWalkSpeed = JogSpeed;
 	}
 	else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("C2S_Jog_Implementation %f"), WalkSpeed);
+
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
-	
+}
+
+void ABasePlayer::Shoot()
+{
+	//Tick(); 연사
+	if (CurrentWeapon && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (PC)
+		{
+			int32 SizeX = 0;
+			int32 SizeY = 0;
+			PC->GetViewportSize(SizeX, SizeY);
+			int32 CenterX = SizeX / 2;
+			int32 CenterY = SizeY / 2;
+
+			FVector WorldPosition;
+			FVector WorldDirection;
+
+			//2D -> 3D(World) Deprojection , 3D(World) -> 2D Projection
+			PC->DeprojectScreenPositionToWorld(CenterX, CenterY,
+				WorldPosition, WorldDirection);
+
+			FVector CameraLocation;
+			FRotator CameraRotation;
+			PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+			FVector Start = CameraLocation;
+			FVector RandomVector = WorldDirection + (UKismetMathLibrary::RandomUnitVector() * 0.008f);
+			FVector End = CameraLocation + (RandomVector * 99999.0f);
+
+
+
+			TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+			TArray<AActor*> IgnoreActors;
+			FHitResult OutHit;
+
+			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
+			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
+			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+			if (UKismetSystemLibrary::LineTraceSingleForObjects(
+				GetWorld(),
+				Start,
+				End,
+				ObjectTypes,
+				true,
+				IgnoreActors,
+				EDrawDebugTrace::ForDuration,
+				OutHit,
+				true,
+				FLinearColor::Red,
+				FLinearColor::Green,
+				3.0f
+			))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Hit Actor : %s"), *OutHit.GetActor()->GetName());
+
+				UE_LOG(LogTemp, Warning, TEXT("Hit BoneName : %s"), *OutHit.BoneName.ToString());
+
+				UGameplayStatics::ApplyPointDamage(
+					OutHit.GetActor(),
+					50.0f,
+					-OutHit.ImpactNormal,
+					OutHit,
+					GetController(),
+					this,
+					nullptr
+				);
+
+			}
+
+			FRotator CurrentRotator = GetControlRotation();
+			float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
+			CurrentRotator.Pitch += RandomAddPitch;
+			GetController()->SetControlRotation(CurrentRotator);
+
+			//리플렉션 
+			//EWeaponType::Unarmed -> "Unarmed"
+			//Enum to String(Unarmed, Pistol)
+			const UEnum* EnumPtr = StaticEnum<EWeaponType>();
+			if (EnumPtr)
+			{
+				FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
+				PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
+			}
+
+			CurrentWeapon->Fire();
+		}
+	}
+	else
+	{
+		//call C++, Execute BP
+		//PlayMeleeAttack();
+		AttackCombo();
+	}
+}
+
+void ABasePlayer::C2S_Fire_Implementation(bool Value)
+{
+	bFire = Value;
 }
 
 void ABasePlayer::Move(const FInputActionValue& Value)
@@ -237,98 +348,13 @@ void ABasePlayer::AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate)
 }
 
 
-void ABasePlayer::Fire()
+void ABasePlayer::Fire(const FInputActionValue& Value)
 {
-	if (CurrentWeapon && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
+	if (bFire != Value.Get<bool>())
 	{
-		APlayerController* PC = Cast<APlayerController>(GetController());
-		if (PC)
-		{
-			int32 SizeX = 0;
-			int32 SizeY = 0;
-			PC->GetViewportSize(SizeX, SizeY);
-			int32 CenterX = SizeX / 2;
-			int32 CenterY = SizeY / 2;
+		bFire = Value.Get<bool>();
 
-			FVector WorldPosition;
-			FVector WorldDirection;
-
-			//2D -> 3D(World) Deprojection , 3D(World) -> 2D Projection
-			PC->DeprojectScreenPositionToWorld(CenterX, CenterY,
-				WorldPosition, WorldDirection);
-
-			FVector CameraLocation;
-			FRotator CameraRotation;
-			PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-			FVector Start = CameraLocation;
-			FVector RandomVector = WorldDirection + (UKismetMathLibrary::RandomUnitVector() * 0.008f);
-			FVector End = CameraLocation + (RandomVector * 99999.0f);
-
-			
-
-			TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-			TArray<AActor*> IgnoreActors;
-			FHitResult OutHit;
-
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
-
-			if (UKismetSystemLibrary::LineTraceSingleForObjects(
-				GetWorld(),
-				Start,
-				End,
-				ObjectTypes,
-				true,
-				IgnoreActors,
-				EDrawDebugTrace::ForDuration,
-				OutHit,
-				true,
-				FLinearColor::Red,
-				FLinearColor::Green,
-				3.0f
-			))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit Actor : %s"), *OutHit.GetActor()->GetName());
-
-				UE_LOG(LogTemp, Warning, TEXT("Hit BoneName : %s"), *OutHit.BoneName.ToString());
-
-				UGameplayStatics::ApplyPointDamage(
-					OutHit.GetActor(),
-					50.0f,
-					-OutHit.ImpactNormal,
-					OutHit,
-					GetController(),
-					this,
-					nullptr
-				);
-			
-			}
-
-			FRotator CurrentRotator = GetControlRotation();
-			float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
-			CurrentRotator.Pitch += RandomAddPitch;
-			GetController()->SetControlRotation(CurrentRotator);
-
-			//리플렉션 
-			//EWeaponType::Unarmed -> "Unarmed"
-			//Enum to String(Unarmed, Pistol)
-			const UEnum* EnumPtr = StaticEnum<EWeaponType>();
-			if (EnumPtr)
-			{
-				FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
-				PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
-			}
-
-			CurrentWeapon->Fire();
-		}
-	}
-	else
-	{
-		//call C++, Execute BP
-		//PlayMeleeAttack();
-		AttackCombo();
+		C2S_Fire(bFire);
 	}
 }
 
@@ -447,4 +473,11 @@ float ABasePlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEven
 	}
 
 	return 0.0f;
+}
+
+void ABasePlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABasePlayer, bIsLog);
 }

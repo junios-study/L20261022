@@ -21,6 +21,8 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsCrouched = Player->bIsCrouched;
 		AimPitch = Player->GetAimRotation().Pitch;
 		AimYaw = Player->GetAimRotation().Yaw;
+		//AimPitch = Player->GetBaseAimRotation().Pitch;
+		//AimYaw = Player->GetBaseAimRotation().Yaw;
 		TargetLeanAngle = Player->TargetLeanAngle;
 
 		bIsBigHeadMode = Player->bIsBigHeadMode;

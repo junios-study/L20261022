@@ -100,7 +100,7 @@ public:
 	void AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate);
 
 	UFUNCTION(BlueprintCallable)
-	void Fire();
+	void Fire(const FInputActionValue& Value);
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeBigHeadMode();
@@ -160,4 +160,30 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
 	float CurrentHP = 100;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+
+	UFUNCTION(Server, Reliable)
+	void C2S_Jog(bool Value);
+	void C2S_Jog_Implementation(bool Value);
+
+	void Shoot();
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
+	uint8 bIsLog : 1 = false;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
+	uint8 bFire : 1 = false;
+
+
+	UFUNCTION(Server, Reliable)
+	void C2S_Fire(bool Value);
+	void C2S_Fire_Implementation(bool Value);
+
+	float FireRate = 0.1f;
+
+	//Tick, ¼­¹öTick
+	float ElapsedFireTime = 0.0f;
 };
