@@ -1,0 +1,163 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "BasePlayer.generated.h"
+
+class USpringArmComponent;
+class UCameraComponent;
+
+class UInputAction;
+struct FInputActionValue;
+
+UCLASS()
+class L20261022_API ABasePlayer : public ACharacter
+{
+	GENERATED_BODY()
+
+public:
+	// Sets default values for this character's properties
+	ABasePlayer();
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+public:	
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<USpringArmComponent> SpringArm;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UCameraComponent> Camera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Jump;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Move;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_MouseLook;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Jog;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Fire;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_ChangeWeapon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Lean;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Zoom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Status")
+	float WalkSpeed = 300.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Status")
+	float JogSpeed = 500.0f;
+
+
+	void Jog(const FInputActionValue& Value);
+
+
+	void Move(const FInputActionValue& Value);
+
+
+	void Look(const FInputActionValue& Value);
+
+
+	void ChangeWeapon(const FInputActionValue& Value);
+
+	void Zoom(const FInputActionValue& Value);
+
+
+	void Lean(const FInputActionValue& Value);
+	
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimationAsset> IdleAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimationAsset> JogAnimation;
+
+	UFUNCTION(BlueprintCallable)
+	FRotator GetAimRotation() const;
+
+	UFUNCTION(BlueprintCallable)
+	void AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate);
+
+	UFUNCTION(BlueprintCallable)
+	void Fire();
+
+	UFUNCTION(BlueprintCallable)
+	void ChangeBigHeadMode();
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Data")
+	TArray<TObjectPtr<AWeaponBase>> HaveWeapons;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Data")
+	TObjectPtr<AWeaponBase> CurrentWeapon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+	TObjectPtr<UAnimMontage> MeleeAttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+	TObjectPtr<UAnimMontage> HitRectionMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+	float TargetLeanAngle = 0;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+	uint64 bIsBigHeadMode : 1 = false;
+
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayMeleeAttack();
+
+	UFUNCTION(BlueprintCallable)
+	void PlayMontageMeleeAttack();
+
+	UFUNCTION(BlueprintCallable)
+	void AttackCombo();
+
+	UFUNCTION(BlueprintCallable)
+	void CheckCombo();
+
+	UFUNCTION(BlueprintCallable)
+	void CheckHit();
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	uint8 bIsZoom : 1 = false;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+	uint8 bIsMeleeAttacking : 1 = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+	int32 ComboCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animations")
+	int32 PlayingComboIndex = 0;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)  override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	float CurrentHP = 100;
+
+};

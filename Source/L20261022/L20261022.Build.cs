@@ -8,7 +8,14 @@ public class L20261022 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
+			"UMG",
+			"EnhancedInput",
+            "AnimGraphRuntime"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
