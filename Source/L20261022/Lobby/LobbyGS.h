@@ -19,7 +19,6 @@ class L20261022_API ALobbyGS : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data", ReplicatedUsing = "OnRep_LeftTime")
 	int64 LeftTime = 60;
 

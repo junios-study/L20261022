@@ -29,6 +29,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<class ULobbyWidgetBase> LobbyWidgetObject;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UUserWidget> LoadingWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<class UUserWidget> LoadingWidgetObject;
+
 	UFUNCTION(Server, WithValidation, Reliable)
 	void C2S_SendMessage(const FText& Messsage);
 	bool C2S_SendMessage_Validate(const FText& Messsage);
@@ -37,5 +44,15 @@ public:
 	UFUNCTION(Client, Reliable)
 	void S2C_SendMessage(const FText& Messsage);
 	void S2C_SendMessage_Implementation(const FText& Messsage);
+
+	UFUNCTION(Client, Reliable)
+	void S2C_ShowLoadingScreen();
+	void S2C_ShowLoadingScreen_Implementation();
+
+	void ShowLoadingScreen();
+
+	UFUNCTION(Server, Reliable)
+	void C2S_StartGame();
+	void C2S_StartGame_Implementation();
 
 };

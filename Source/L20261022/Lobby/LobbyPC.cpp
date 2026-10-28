@@ -5,6 +5,7 @@
 #include "LobbyWidgetBase.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "LobbyGS.h"
+#include "LobbyGM.h"
 #include "Kismet/GameplayStatics.h"
 
 ALobbyPC::ALobbyPC()
@@ -78,4 +79,42 @@ void ALobbyPC::S2C_SendMessage_Implementation(const FText& Messsage)
 		LobbyWidgetObject->AddMessage(Messsage);
 	}
 }
+
+void ALobbyPC::S2C_ShowLoadingScreen_Implementation()
+{
+	ShowLoadingScreen();
+}
+
+void ALobbyPC::ShowLoadingScreen()
+{
+	if (LoadingWidgetClass && !LoadingWidgetObject)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ShowLoadingScreen %s"), *GetName());
+
+		LoadingWidgetObject = CreateWidget<UUserWidget>(this, LoadingWidgetClass);
+		if (LoadingWidgetObject)
+		{
+			LoadingWidgetObject->AddToViewport();
+		}
+	}
+}
+
+void ALobbyPC::C2S_StartGame_Implementation()
+{
+	ALobbyGM* GM = Cast<ALobbyGM>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GM)
+	{
+		for (auto Iter = GetWorld()->GetPlayerControllerIterator(); Iter; ++Iter)
+		{
+			ALobbyPC* PC = Cast<ALobbyPC>(*Iter);
+			if (PC)
+			{
+				PC->S2C_ShowLoadingScreen();
+			}
+		}
+
+		GM->OpenInGame();
+	}
+}
+
 

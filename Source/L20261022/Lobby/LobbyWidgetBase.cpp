@@ -66,10 +66,11 @@ void ULobbyWidgetBase::ProcessTextCommited(const FText& Text, ETextCommit::Type 
 
 void ULobbyWidgetBase::OnStart()
 {
-	ALobbyGM* GM = Cast<ALobbyGM>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (GM)
+	ALobbyPC* PC = Cast<ALobbyPC>(GetOwningPlayer());
+	if (PC)
 	{
-		GM->OpenInGame();
+		//Call Client, Execute Server
+		PC->C2S_StartGame();
 	}
 }
 
