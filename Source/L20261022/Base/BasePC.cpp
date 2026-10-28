@@ -18,4 +18,8 @@ void ABasePC::BeginPlay()
 			}
 		}
 	}
+
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
+
 }

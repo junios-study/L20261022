@@ -51,16 +51,21 @@ void ABasePlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	
-	if (!CurrentWeapon &&
-		ElapsedFireTime >= FireRate && bFire && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
+	//UE_LOG(LogTemp, Warning, TEXT("Tick1 %f"), ElapsedFireTime);
+
+	if (!CurrentWeapon)
+	{
+		return;
+	}
+
+	if (ElapsedFireTime >= FireRate && bFire && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
 	{
 		Shoot();
 		ElapsedFireTime = 0;
 	}
 	else
 	{
-		ElapsedFireTime = +DeltaTime;
+		ElapsedFireTime += DeltaTime;
 	}
 }
 
@@ -81,6 +86,9 @@ void ABasePlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 		UIC->BindAction(IA_Jog, ETriggerEvent::Triggered, this, &ABasePlayer::Jog);
 		UIC->BindAction(IA_Jog, ETriggerEvent::Completed, this, &ABasePlayer::Jog);
+
+		UIC->BindAction(IA_Fire, ETriggerEvent::Triggered, this, &ABasePlayer::Fire);
+		UIC->BindAction(IA_Fire, ETriggerEvent::Completed, this, &ABasePlayer::Fire);
 
 		UIC->BindAction(IA_ChangeWeapon, ETriggerEvent::Triggered, this, &ABasePlayer::ChangeWeapon);
 
@@ -129,97 +137,92 @@ void ABasePlayer::C2S_Jog_Implementation(bool Value)
 
 void ABasePlayer::Shoot()
 {
-	//Tick(); 연사
-	if (CurrentWeapon && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC)
 	{
-		APlayerController* PC = Cast<APlayerController>(GetController());
-		if (PC)
+		int32 SizeX = 0;
+		int32 SizeY = 0;
+		PC->GetViewportSize(SizeX, SizeY);
+		int32 CenterX = SizeX / 2;
+		int32 CenterY = SizeY / 2;
+
+		FVector WorldPosition;
+		FVector WorldDirection;
+
+		//2D -> 3D(World) Deprojection , 3D(World) -> 2D Projection
+		PC->DeprojectScreenPositionToWorld(CenterX, CenterY,
+			WorldPosition, WorldDirection);
+
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+		FVector Start = CameraLocation;
+		FVector RandomVector = WorldDirection + (UKismetMathLibrary::RandomUnitVector() * 0.008f);
+		FVector End = CameraLocation + (RandomVector * 99999.0f);
+
+		C2S_FireTrace(Start, End);
+
+
+		FRotator CurrentRotator = GetControlRotation();
+		float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
+		CurrentRotator.Pitch += RandomAddPitch;
+		GetController()->SetControlRotation(CurrentRotator);
+
+		//리플렉션 
+		//EWeaponType::Unarmed -> "Unarmed"
+		//Enum to String(Unarmed, Pistol)
+		const UEnum* EnumPtr = StaticEnum<EWeaponType>();
+		if (EnumPtr)
 		{
-			int32 SizeX = 0;
-			int32 SizeY = 0;
-			PC->GetViewportSize(SizeX, SizeY);
-			int32 CenterX = SizeX / 2;
-			int32 CenterY = SizeY / 2;
-
-			FVector WorldPosition;
-			FVector WorldDirection;
-
-			//2D -> 3D(World) Deprojection , 3D(World) -> 2D Projection
-			PC->DeprojectScreenPositionToWorld(CenterX, CenterY,
-				WorldPosition, WorldDirection);
-
-			FVector CameraLocation;
-			FRotator CameraRotation;
-			PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-			FVector Start = CameraLocation;
-			FVector RandomVector = WorldDirection + (UKismetMathLibrary::RandomUnitVector() * 0.008f);
-			FVector End = CameraLocation + (RandomVector * 99999.0f);
-
-
-
-			TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-			TArray<AActor*> IgnoreActors;
-			FHitResult OutHit;
-
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
-			ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
-
-			if (UKismetSystemLibrary::LineTraceSingleForObjects(
-				GetWorld(),
-				Start,
-				End,
-				ObjectTypes,
-				true,
-				IgnoreActors,
-				EDrawDebugTrace::ForDuration,
-				OutHit,
-				true,
-				FLinearColor::Red,
-				FLinearColor::Green,
-				3.0f
-			))
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit Actor : %s"), *OutHit.GetActor()->GetName());
-
-				UE_LOG(LogTemp, Warning, TEXT("Hit BoneName : %s"), *OutHit.BoneName.ToString());
-
-				UGameplayStatics::ApplyPointDamage(
-					OutHit.GetActor(),
-					50.0f,
-					-OutHit.ImpactNormal,
-					OutHit,
-					GetController(),
-					this,
-					nullptr
-				);
-
-			}
-
-			FRotator CurrentRotator = GetControlRotation();
-			float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
-			CurrentRotator.Pitch += RandomAddPitch;
-			GetController()->SetControlRotation(CurrentRotator);
-
-			//리플렉션 
-			//EWeaponType::Unarmed -> "Unarmed"
-			//Enum to String(Unarmed, Pistol)
-			const UEnum* EnumPtr = StaticEnum<EWeaponType>();
-			if (EnumPtr)
-			{
-				FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
-				PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
-			}
-
-			CurrentWeapon->Fire();
+			FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
+			PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
 		}
+
+		CurrentWeapon->Fire();
 	}
-	else
+}
+
+void ABasePlayer::C2S_FireTrace_Implementation(FVector Start, FVector End)
+{
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+	TArray<AActor*> IgnoreActors;
+	FHitResult OutHit;
+
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+	if (UKismetSystemLibrary::LineTraceSingleForObjects(
+		GetWorld(),
+		Start,
+		End,
+		ObjectTypes,
+		true,
+		IgnoreActors,
+		EDrawDebugTrace::ForDuration,
+		OutHit,
+		true,
+		FLinearColor::Red,
+		FLinearColor::Green,
+		3.0f
+	))
 	{
-		//call C++, Execute BP
-		//PlayMeleeAttack();
-		AttackCombo();
+		UE_LOG(LogTemp, Warning, TEXT("Hit Actor : %s"), *OutHit.GetActor()->GetName());
+
+		UE_LOG(LogTemp, Warning, TEXT("Hit BoneName : %s"), *OutHit.BoneName.ToString());
+
+		UGameplayStatics::ApplyPointDamage(
+			OutHit.GetActor(),
+			50.0f,
+			-OutHit.ImpactNormal,
+			OutHit,
+			GetController(),
+			this,
+			nullptr
+		);
+
 	}
 }
 
@@ -283,7 +286,7 @@ void ABasePlayer::ChangeWeapon(const FInputActionValue& Value)
 		NewUsedWeapon = 0;
 	}
 	//NewUsedWeapon = FMath::Clamp(NewUsedWeapon, 0, MaxWeaponCount - 1);
-	
+
 	CurrentWeapon->SetActorHiddenInGame(true);
 
 	CurrentWeapon = HaveWeapons[NewUsedWeapon];
@@ -350,11 +353,21 @@ void ABasePlayer::AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate)
 
 void ABasePlayer::Fire(const FInputActionValue& Value)
 {
-	if (bFire != Value.Get<bool>())
+	if (CurrentWeapon && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
 	{
-		bFire = Value.Get<bool>();
+		if (bFire != Value.Get<bool>())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Fire %d"), Value.Get<bool>());
 
-		C2S_Fire(bFire);
+			bFire = Value.Get<bool>();
+
+			C2S_Fire(bFire);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Fire"));
+		C2S_AttackCombo();
 	}
 }
 
@@ -381,7 +394,7 @@ void ABasePlayer::PlayMontageMeleeAttack()
 					PlayingComboIndex = 0;
 					bIsMeleeAttacking = false;
 				}
-			});
+				});
 
 			AnimInstance->Montage_SetEndDelegate(EndDelegate);
 		}
@@ -401,7 +414,7 @@ void ABasePlayer::AttackCombo()
 	{
 		ComboCount++;
 	}
-	
+
 }
 
 void ABasePlayer::CheckCombo()
@@ -423,7 +436,7 @@ void ABasePlayer::CheckHit()
 
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
 
-	
+
 
 	bool Result = UKismetSystemLibrary::SphereOverlapActors(
 		GetWorld(),
@@ -480,4 +493,18 @@ void ABasePlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ABasePlayer, bIsLog);
+	DOREPLIFETIME(ABasePlayer, bFire);
+}
+
+
+void ABasePlayer::S2A_AttackCombo_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("S2A_AttackCombo_Implementation"));
+	AttackCombo();
+}
+
+void ABasePlayer::C2S_AttackCombo_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("C2S_AttackCombo_Implementation"));
+	S2A_AttackCombo();
 }

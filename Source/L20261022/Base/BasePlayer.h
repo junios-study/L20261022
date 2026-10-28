@@ -162,12 +162,24 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void S2A_AttackCombo();
+	void S2A_AttackCombo_Implementation();
+
+	UFUNCTION(Server, Reliable)
+	void C2S_AttackCombo();
+	void C2S_AttackCombo_Implementation();
+
 
 	UFUNCTION(Server, Reliable)
 	void C2S_Jog(bool Value);
 	void C2S_Jog_Implementation(bool Value);
 
 	void Shoot();
+
+	UFUNCTION(Server, Reliable)
+	void C2S_FireTrace(FVector Start, FVector End);
+	void C2S_FireTrace_Implementation(FVector Start, FVector End);
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
