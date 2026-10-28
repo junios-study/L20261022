@@ -390,7 +390,6 @@ void ABasePlayer::CheckCombo()
 
 void ABasePlayer::CheckHit()
 {
-	UE_LOG(LogTemp, Warning, TEXT("CheckHit"));
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 	TArray<AActor*> IgnoreActors;
 	TArray<AActor*> OutActors;
