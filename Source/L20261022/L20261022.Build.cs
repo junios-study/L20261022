@@ -14,7 +14,9 @@ public class L20261022 : ModuleRules
 			"InputCore",
 			"UMG",
 			"EnhancedInput",
-            "AnimGraphRuntime"
+            "AnimGraphRuntime",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

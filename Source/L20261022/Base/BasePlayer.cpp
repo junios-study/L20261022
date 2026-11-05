@@ -14,6 +14,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/DamageEvents.h"
 
 // Sets default values
 ABasePlayer::ABasePlayer()
@@ -92,23 +93,23 @@ void ABasePlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void ABasePlayer::Jog(const FInputActionValue& Value)
 {
 
-	if (Value.Get<bool>() != bIsLog)
+	if (Value.Get<bool>() != bIsJog)
 	{
-		bIsLog = Value.Get<bool>();
+		bIsJog = Value.Get<bool>();
 
 		//내꺼 속력 설정
-		C2S_Jog_Implementation(bIsLog);
+		C2S_Jog_Implementation(bIsJog);
 
 		//서버에서 속력 설정
-		C2S_Jog(bIsLog);
+		C2S_Jog(bIsJog);
 	}
 }
 
 void ABasePlayer::C2S_Jog_Implementation(bool Value)
 {
-	bIsLog = Value;
+	bIsJog = Value;
 
-	if (bIsLog)
+	if (bIsJog)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("C2S_Jog_Implementation %f"), JogSpeed);
 
@@ -120,6 +121,14 @@ void ABasePlayer::C2S_Jog_Implementation(bool Value)
 
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
+}
+
+void ABasePlayer::S2A_DeadMotion_Implementation(const FVector& ImpactDirection)
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->AddImpulse(ImpactDirection * GetMesh()->GetMass() * 100.0f);
 }
 
 void ABasePlayer::Shoot()
@@ -481,19 +490,51 @@ void ABasePlayer::CheckHit()
 float ABasePlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID)) // PointDamage, 총알
+	{
+		FPointDamageEvent* PointDamageEvent = (FPointDamageEvent*)(&DamageEvent);
+		if (PointDamageEvent)
+		{
+			if (PointDamageEvent->HitInfo.BoneName == FName(TEXT("head")))
+			{
+				CurrentHP = 0;
+			}
+			else
+			{
+				CurrentHP -= DamageAmount;
+			}
 
-	CurrentHP -= DamageAmount;
-	if (CurrentHP > 0)
-	{
-		GetCharacterMovement()->AddImpulse((GetActorForwardVector() + GetActorUpVector()) * GetMesh()->GetMass() * 7.0f, true);
-		PlayAnimMontage(HitRectionMontage);
+			if (CurrentHP <= 0)
+			{
+				//S2A
+				S2A_DeadMotion(-PointDamageEvent->HitInfo.ImpactNormal);
+
+				//SpawnActor -> Spectator Pawn
+				//Possess
+			}
+		}
+
 	}
-	else
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID)) //범위 대미지
 	{
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		GetMesh()->SetSimulatePhysics(true);
-		GetMesh()->AddImpulse((GetActorForwardVector() + GetActorUpVector()) * GetMesh()->GetMass() * 400.0f);
+
+	}
+	else //
+	{
+		CurrentHP -= DamageAmount;
+		if (CurrentHP > 0)
+		{
+			GetCharacterMovement()->AddImpulse((GetActorForwardVector() + GetActorUpVector()) * GetMesh()->GetMass() * 7.0f, true);
+			PlayAnimMontage(HitRectionMontage);
+		}
+		else
+		{
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			GetMesh()->SetSimulatePhysics(true);
+			GetMesh()->AddImpulse((GetActorForwardVector() + GetActorUpVector()) * GetMesh()->GetMass() * 400.0f);
+		}
 	}
 
 	return 0.0f;
@@ -503,8 +544,9 @@ void ABasePlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABasePlayer, bIsLog);
+	DOREPLIFETIME(ABasePlayer, bIsJog);
 	DOREPLIFETIME(ABasePlayer, bFire);
+	DOREPLIFETIME(ABasePlayer, CurrentHP);
 }
 
 

@@ -162,7 +162,7 @@ public:
 
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)  override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
 	float CurrentHP = 100;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -180,6 +180,10 @@ public:
 	void C2S_Jog(bool Value);
 	void C2S_Jog_Implementation(bool Value);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void S2A_DeadMotion(const FVector& ImpactDirection);
+	void S2A_DeadMotion_Implementation(const FVector& ImpactDirection);
+
 	void Shoot();
 
 	UFUNCTION(BlueprintCallable)
@@ -187,7 +191,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
-	uint8 bIsLog : 1 = false;
+	uint8 bIsJog : 1 = false;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
