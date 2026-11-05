@@ -100,7 +100,12 @@ public:
 	void AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate);
 
 	UFUNCTION(BlueprintCallable)
-	void Fire(const FInputActionValue& Value);
+	void FireStart(const FInputActionValue& Value);
+
+	UFUNCTION(BlueprintCallable)
+	void FireStop(const FInputActionValue& Value);
+
+
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeBigHeadMode();
@@ -177,9 +182,8 @@ public:
 
 	void Shoot();
 
-	UFUNCTION(Server, Reliable)
-	void C2S_FireTrace(FVector Start, FVector End);
-	void C2S_FireTrace_Implementation(FVector Start, FVector End);
+	UFUNCTION(BlueprintCallable)
+	void FireTrace(FVector Start, FVector End);
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status", Replicated)
@@ -194,8 +198,13 @@ public:
 	void C2S_Fire(bool Value);
 	void C2S_Fire_Implementation(bool Value);
 
+	void StopTrigger();
+
 	float FireRate = 0.1f;
 
 	//Tick, ¼­¹öTick
 	float ElapsedFireTime = 0.0f;
+
+
+	FTimerHandle FireTimerHandle;
 };

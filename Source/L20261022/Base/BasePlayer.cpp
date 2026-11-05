@@ -53,20 +53,6 @@ void ABasePlayer::Tick(float DeltaTime)
 
 	//UE_LOG(LogTemp, Warning, TEXT("Tick1 %f"), ElapsedFireTime);
 
-	if (!CurrentWeapon)
-	{
-		return;
-	}
-
-	if (ElapsedFireTime >= FireRate && bFire && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
-	{
-		Shoot();
-		ElapsedFireTime = 0;
-	}
-	else
-	{
-		ElapsedFireTime += DeltaTime;
-	}
 }
 
 // Called to bind functionality to input
@@ -87,8 +73,9 @@ void ABasePlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		UIC->BindAction(IA_Jog, ETriggerEvent::Triggered, this, &ABasePlayer::Jog);
 		UIC->BindAction(IA_Jog, ETriggerEvent::Completed, this, &ABasePlayer::Jog);
 
-		UIC->BindAction(IA_Fire, ETriggerEvent::Triggered, this, &ABasePlayer::Fire);
-		UIC->BindAction(IA_Fire, ETriggerEvent::Completed, this, &ABasePlayer::Fire);
+		UIC->BindAction(IA_Fire, ETriggerEvent::Triggered, this, &ABasePlayer::FireStart);
+		UIC->BindAction(IA_Fire, ETriggerEvent::Completed, this, &ABasePlayer::FireStop);
+		UIC->BindAction(IA_Fire, ETriggerEvent::Canceled, this, &ABasePlayer::FireStop);
 
 		UIC->BindAction(IA_ChangeWeapon, ETriggerEvent::Triggered, this, &ABasePlayer::ChangeWeapon);
 
@@ -137,55 +124,47 @@ void ABasePlayer::C2S_Jog_Implementation(bool Value)
 
 void ABasePlayer::Shoot()
 {
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (PC)
+	//서버 에서만 실행 되게 함.
+	if (!HasAuthority() ||
+		!bFire  ||
+		!IsValid(CurrentWeapon) ||
+		CurrentWeapon->WeaponType == EWeaponType::Unarmed ||
+		CurrentHP <= 0 ||
+		FireRate <= 0.f ||
+		!IsValid(Camera) )
 	{
-		int32 SizeX = 0;
-		int32 SizeY = 0;
-		PC->GetViewportSize(SizeX, SizeY);
-		int32 CenterX = SizeX / 2;
-		int32 CenterY = SizeY / 2;
-
-		FVector WorldPosition;
-		FVector WorldDirection;
-
-		//2D -> 3D(World) Deprojection , 3D(World) -> 2D Projection
-		PC->DeprojectScreenPositionToWorld(CenterX, CenterY,
-			WorldPosition, WorldDirection);
-
-		FVector CameraLocation;
-		FRotator CameraRotation;
-		PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-		FVector Start = CameraLocation;
-		FVector RandomVector = WorldDirection + (UKismetMathLibrary::RandomUnitVector() * 0.008f);
-		FVector End = CameraLocation + (RandomVector * 99999.0f);
-
-		C2S_FireTrace(Start, End);
-
-
-		FRotator CurrentRotator = GetControlRotation();
-		float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
-		CurrentRotator.Pitch += RandomAddPitch;
-		GetController()->SetControlRotation(CurrentRotator);
-
-		//리플렉션 
-		//EWeaponType::Unarmed -> "Unarmed"
-		//Enum to String(Unarmed, Pistol)
-		const UEnum* EnumPtr = StaticEnum<EWeaponType>();
-		if (EnumPtr)
-		{
-			FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
-			PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
-		}
-
-		CurrentWeapon->Fire();
+		return;
 	}
+
+
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + (GetBaseAimRotation().Vector() * 999999.9f);
+
+	FireTrace(Start, End);
+
+
+	//FRotator CurrentRotator = GetControlRotation();
+	//float RandomAddPitch = FMath::RandRange(0.5f, 1.5f);
+	//CurrentRotator.Pitch += RandomAddPitch;
+	//GetController()->SetControlRotation(CurrentRotator);
+
+	//리플렉션 
+	//EWeaponType::Unarmed -> "Unarmed"
+	//Enum to String(Unarmed, Pistol)
+	//S2A
+	//const UEnum* EnumPtr = StaticEnum<EWeaponType>();
+	//if (EnumPtr)
+	//{
+	//	FString SectionName = EnumPtr->GetNameStringByValue((int32)CurrentWeapon->WeaponType);
+	//	PlayAnimMontage(CurrentWeapon->FireMontage, 1.0f, FName(SectionName));
+	//}
+
+	CurrentWeapon->Fire();
+
 }
 
-void ABasePlayer::C2S_FireTrace_Implementation(FVector Start, FVector End)
+void ABasePlayer::FireTrace(FVector Start, FVector End)
 {
-
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 	TArray<AActor*> IgnoreActors;
 	FHitResult OutHit;
@@ -228,8 +207,38 @@ void ABasePlayer::C2S_FireTrace_Implementation(FVector Start, FVector End)
 
 void ABasePlayer::C2S_Fire_Implementation(bool Value)
 {
-	bFire = Value;
+	if (!Value) //Stop
+	{
+		StopTrigger();
+		return;
+	}
+
+	if ( !IsValid(CurrentWeapon) ||
+		CurrentWeapon->WeaponType == EWeaponType::Unarmed ||
+		CurrentHP <= 0 ||
+		FireRate <= 0.f)
+	{
+		return;
+	}
+
+	bFire = true;
+
+	Shoot();
+
+	if (bFire)
+	{
+		GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ABasePlayer::Shoot, FireRate, true);
+	}
 }
+
+void ABasePlayer::StopTrigger()
+{
+	bFire = false;
+
+	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+}
+
+
 
 void ABasePlayer::Move(const FInputActionValue& Value)
 {
@@ -350,19 +359,13 @@ void ABasePlayer::AttachWeapon(TSubclassOf<class AWeaponBase> WeaponTemplate)
 
 }
 
-
-void ABasePlayer::Fire(const FInputActionValue& Value)
+void ABasePlayer::FireStart(const FInputActionValue& Value)
 {
 	if (CurrentWeapon && CurrentWeapon->WeaponType != EWeaponType::Unarmed)
 	{
-		if (bFire != Value.Get<bool>())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Fire %d"), Value.Get<bool>());
-
-			bFire = Value.Get<bool>();
-
-			C2S_Fire(bFire);
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Fire %d"), Value.Get<bool>());
+		bFire = true;
+		C2S_Fire(true);
 	}
 	else
 	{
@@ -370,6 +373,14 @@ void ABasePlayer::Fire(const FInputActionValue& Value)
 		C2S_AttackCombo();
 	}
 }
+
+void ABasePlayer::FireStop(const FInputActionValue& Value)
+{
+	C2S_Fire(false);
+}
+
+
+
 
 void ABasePlayer::ChangeBigHeadMode()
 {
