@@ -22,5 +22,12 @@ public:
 	TObjectPtr<UInputMappingContext> InputMapping;
 
 	virtual void BeginPlay() override;
+
+	virtual void SetupInputComponent() override;
+
+	void OnVoicePressed();
+
+	void OnVoiceReleased();
+
 	
 };
