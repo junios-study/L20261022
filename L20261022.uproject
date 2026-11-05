@@ -25,6 +25,14 @@
 		{
 			"Name": "OnlineServicesNull",
 			"Enabled": true
+		},
+		{
+			"Name": "GameplayStateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "StateTreeToolset",
+			"Enabled": true
 		}
 	]
 }
